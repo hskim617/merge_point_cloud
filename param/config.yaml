@@ -1,0 +1,16 @@
+/**: # namespace and node name
+  ros__parameters:
+    cam0_depth_topic: "/cam_0/depth/color/points"
+    cam1_depth_topic: "/cam_1/depth/color/points"
+    cam2_depth_topic: "/cam_2/depth/color/points"
+    cam3_depth_topic: "/cam_3/depth/color/points"
+    publish_topic: "/camera/depth/points"
+    use_cam0: true
+    use_cam1: true
+    use_cam2: false
+    use_cam3: false
+    max_publish_duration: 0.03
+    # point_cloud_merge_duration: 1.0
+    point_cloud_publish_duration: 0.06 # should change here
+    apply_voxel_grid_filter: true
+    voxel_grid_filter_size: 0.02
