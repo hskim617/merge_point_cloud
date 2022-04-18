@@ -604,6 +604,7 @@ private:
 
     // tf_body_1l= tf_body_0l * tf_0l_0cof * tf_1cof_0cof.inverse() * tf_1l_1cof.inverse();
     // tf_body_2l = tf_body_0l * tf_0l_0cof * tf_2cof_0cof.inverse() * tf_2l_2cof.inverse();
+    // TODO: change 'tf_2cof_0cof' to 'tf_2cof_0cof.inverse()'
     tf_body_2l = tf_body_0l * tf_0l_0cof * tf_2cof_0cof * tf_2l_2cof.inverse();
     Eigen::Vector3f c2_center;
     c2_center = this->get_camera_center(tf_body_2l.inverse());
