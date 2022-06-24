@@ -12,7 +12,7 @@ $ git clone https://github.com/hskim617/merge_point_cloud.git
 ## Build
 ```bash
 $ cd ~/ros2_ws
-$ colcon build --symlink-install --packages-select merge_point_cloud
+$ colcon build --symlink-install --packages-select merge_point_cloud --cmake-args -DCMAKE_BUILD_TYPE=Release
 $ source ~/ros2_ws/install/local_setup.bash
 ```
 

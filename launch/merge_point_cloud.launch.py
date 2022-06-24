@@ -23,7 +23,7 @@ def generate_launch_description():
             description='Full path of parameter file for merge point cloud'),
 
         Node(
-            package='merge_point_cloud',
+            package='merge_point_cloud',                                                                                             
             executable='merge_point_cloud',
             name='merge_point_cloud',
             parameters=[param_dir],
