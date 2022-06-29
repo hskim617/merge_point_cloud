@@ -208,8 +208,9 @@ private:
       publisher_->publish(*msg);
       last_published_time_ = this->now();
 
-      RCLCPP_INFO(this->get_logger(), "Merged point cloud has (%i points).", static_cast<int>(pointCloudMerged->size()));
-      RCLCPP_INFO(this->get_logger(), "Merged point cloud header stamp is %d.%d sec.", msg->header.stamp.sec, msg->header.stamp.nanosec);
+      auto steady_clock = rclcpp::Clock();
+      RCLCPP_INFO_THROTTLE(this->get_logger(), steady_clock, 5000, "Merged point cloud has (%i points).", static_cast<int>(pointCloudMerged->size()));
+      RCLCPP_INFO_THROTTLE(this->get_logger(), steady_clock, 5000, "Merged point cloud header stamp is %d.%d sec.", msg->header.stamp.sec, msg->header.stamp.nanosec);
       // RCLCPP_INFO(this->get_logger(), "Merged point cloud frame id is %s.", (msg->header.frame_id).c_str());
 
       pointCloudMerged->clear(); // clear the merged cloud
