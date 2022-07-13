@@ -189,10 +189,77 @@ private:
       boost::recursive_mutex::scoped_lock scoped_lock2(cam2_mutex_);
       boost::recursive_mutex::scoped_lock scoped_lock3(cam3_mutex_);
 
-      if (cam0_merged_ && use_cam0_) *pointCloudMerged += *transformedPointPtr0;
-      if (cam1_merged_ && use_cam1_) *pointCloudMerged += *transformedPointPtr1;
-      if (cam2_merged_ && use_cam2_) *pointCloudMerged += *transformedPointPtr2;
-      if (cam3_merged_ && use_cam3_) *pointCloudMerged += *transformedPointPtr3;
+      // if (cam0_merged_ && use_cam0_) *pointCloudMerged += *transformedPointPtr0;
+      // if (cam1_merged_ && use_cam1_) *pointCloudMerged += *transformedPointPtr1;
+      // if (cam2_merged_ && use_cam2_) *pointCloudMerged += *transformedPointPtr2;
+      // if (cam3_merged_ && use_cam3_) *pointCloudMerged += *transformedPointPtr3;
+
+      std_msgs::msg::Header oldest_header;
+      oldest_header.stamp.sec = INT_MAX;
+      oldest_header.frame_id = "body";
+      if (cam0_merged_ && use_cam0_) {
+        *pointCloudMerged += *transformedPointPtr0;
+        int sec = 1e-6*transformedPointPtr0->header.stamp;
+        uint nsec = 1000*transformedPointPtr0->header.stamp - 1e9*sec;
+        // RCLCPP_INFO(this->get_logger(), "stamp: %d.%d sec", sec, nsec); // microseconds -> nanoseconds
+        // RCLCPP_INFO(this->get_logger(), "stamp: %lld nsec", 1000*transformedPointPtr0->header.stamp); // microseconds -> nanoseconds
+        // std::cout << 1000*transformedPointPtr0->header.stamp << std::endl; // just for checking nanoseconds
+        if(oldest_header.stamp.sec > sec) {
+          oldest_header.stamp.sec = sec;
+          oldest_header.stamp.nanosec = nsec;
+        }
+        else if(oldest_header.stamp.sec == sec) {
+          if(oldest_header.stamp.nanosec > nsec) {
+            oldest_header.stamp.sec = sec;
+            oldest_header.stamp.nanosec = nsec;
+          }
+        }
+      }
+      if (cam1_merged_ && use_cam1_) {
+        *pointCloudMerged += *transformedPointPtr1;
+        int sec = 1e-6*transformedPointPtr1->header.stamp;
+        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
+        if(oldest_header.stamp.sec > sec) {
+          oldest_header.stamp.sec = sec;
+          oldest_header.stamp.nanosec = nsec;
+        }
+        else if(oldest_header.stamp.sec == sec) {
+          if(oldest_header.stamp.nanosec > nsec) {
+            oldest_header.stamp.sec = sec;
+            oldest_header.stamp.nanosec = nsec;
+          }
+        }
+      }
+      if (cam2_merged_ && use_cam2_) {
+        *pointCloudMerged += *transformedPointPtr2;
+        int sec = 1e-6*transformedPointPtr1->header.stamp;
+        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
+        if(oldest_header.stamp.sec > sec) {
+          oldest_header.stamp.sec = sec;
+          oldest_header.stamp.nanosec = nsec;
+        }
+        else if(oldest_header.stamp.sec == sec) {
+          if(oldest_header.stamp.nanosec > nsec) {
+            oldest_header.stamp.sec = sec;
+            oldest_header.stamp.nanosec = nsec;
+          }
+        }
+      }
+      if (cam3_merged_ && use_cam3_) {
+        *pointCloudMerged += *transformedPointPtr3;
+        int sec = 1e-6*transformedPointPtr1->header.stamp;
+        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
+        if(oldest_header.stamp.sec > sec) {
+          oldest_header.stamp.sec = sec;
+          oldest_header.stamp.nanosec = nsec;
+        }
+        else if(oldest_header.stamp.sec == sec) {
+          if(oldest_header.stamp.nanosec > nsec) {
+            oldest_header.stamp.sec = sec;
+            oldest_header.stamp.nanosec = nsec;
+          }
+        }
+      }
 
       scoped_lock0.unlock();
       scoped_lock1.unlock();
@@ -200,13 +267,18 @@ private:
       scoped_lock3.unlock();
 
       pcl::copyPointCloud(*pointCloudMerged, point_cloud);
-      // pointCloudMergedmsg = *pointCloudMerged;
       auto msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
       pcl::toROSMsg(point_cloud, *msg);
-      msg->header.stamp = this->now();
-      msg->header.frame_id = "body";
+
+      // msg->header.frame_id = "body";
+      // msg->header.stamp = this->now();
+      msg->header = oldest_header;
+
       publisher_->publish(*msg);
+
       last_published_time_ = this->now();
+      // RCLCPP_INFO(this->get_logger(), "msg: %d.%d sec", msg->header.stamp.sec, msg->header.stamp.nanosec); // microseconds -> nanoseconds
+      // RCLCPP_INFO(this->get_logger(), "now: %f sec", last_published_time_.seconds());
 
       auto steady_clock = rclcpp::Clock();
       RCLCPP_INFO_THROTTLE(this->get_logger(), steady_clock, 5000, "Merged point cloud has (%i points).", static_cast<int>(pointCloudMerged->size()));
