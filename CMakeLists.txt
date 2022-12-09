@@ -45,9 +45,23 @@ ament_target_dependencies(merge_point_cloud
   Boost
 )
 
+add_executable(merge_point_cloud_sem src/main_sem.cpp)
+ament_target_dependencies(merge_point_cloud_sem
+  rclcpp
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+  tf2
+  tf2_ros
+  message_filters
+  pcl_ros
+  Boost
+)
+
 # install
 install(TARGETS
   merge_point_cloud
+  merge_point_cloud_sem
   DESTINATION lib/${PROJECT_NAME}
 )
 

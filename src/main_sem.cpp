@@ -36,7 +36,9 @@
 // #include "pcl_ros/point_cloud.hpp"
 
 #define pi 3.141592
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+// typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+typedef pcl::PointCloud<pcl::PointXYZRGBNormal> PointCloud;
+
 
 using namespace std::chrono_literals;
 
@@ -51,7 +53,7 @@ class MergePointCloud : public rclcpp::Node
 {
 public:
   MergePointCloud()
-  : Node("merge_point_cloud")
+  : Node("merge_point_cloud_sem")
   {
     RCLCPP_INFO(this->get_logger(), "Merge point cloud constructed.");
 
@@ -189,77 +191,10 @@ private:
       boost::recursive_mutex::scoped_lock scoped_lock2(cam2_mutex_);
       boost::recursive_mutex::scoped_lock scoped_lock3(cam3_mutex_);
 
-      // if (cam0_merged_ && use_cam0_) *pointCloudMerged += *transformedPointPtr0;
-      // if (cam1_merged_ && use_cam1_) *pointCloudMerged += *transformedPointPtr1;
-      // if (cam2_merged_ && use_cam2_) *pointCloudMerged += *transformedPointPtr2;
-      // if (cam3_merged_ && use_cam3_) *pointCloudMerged += *transformedPointPtr3;
-
-      std_msgs::msg::Header oldest_header;
-      oldest_header.stamp.sec = INT_MAX;
-      oldest_header.frame_id = "body";
-      if (cam0_merged_ && use_cam0_) {
-        *pointCloudMerged += *transformedPointPtr0;
-        int sec = 1e-6*transformedPointPtr0->header.stamp;
-        uint nsec = 1000*transformedPointPtr0->header.stamp - 1e9*sec;
-        // RCLCPP_INFO(this->get_logger(), "stamp: %d.%d sec", sec, nsec); // microseconds -> nanoseconds
-        // RCLCPP_INFO(this->get_logger(), "stamp: %lld nsec", 1000*transformedPointPtr0->header.stamp); // microseconds -> nanoseconds
-        // std::cout << 1000*transformedPointPtr0->header.stamp << std::endl; // just for checking nanoseconds
-        if(oldest_header.stamp.sec > sec) {
-          oldest_header.stamp.sec = sec;
-          oldest_header.stamp.nanosec = nsec;
-        }
-        else if(oldest_header.stamp.sec == sec) {
-          if(oldest_header.stamp.nanosec > nsec) {
-            oldest_header.stamp.sec = sec;
-            oldest_header.stamp.nanosec = nsec;
-          }
-        }
-      }
-      if (cam1_merged_ && use_cam1_) {
-        *pointCloudMerged += *transformedPointPtr1;
-        int sec = 1e-6*transformedPointPtr1->header.stamp;
-        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
-        if(oldest_header.stamp.sec > sec) {
-          oldest_header.stamp.sec = sec;
-          oldest_header.stamp.nanosec = nsec;
-        }
-        else if(oldest_header.stamp.sec == sec) {
-          if(oldest_header.stamp.nanosec > nsec) {
-            oldest_header.stamp.sec = sec;
-            oldest_header.stamp.nanosec = nsec;
-          }
-        }
-      }
-      if (cam2_merged_ && use_cam2_) {
-        *pointCloudMerged += *transformedPointPtr2;
-        int sec = 1e-6*transformedPointPtr1->header.stamp;
-        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
-        if(oldest_header.stamp.sec > sec) {
-          oldest_header.stamp.sec = sec;
-          oldest_header.stamp.nanosec = nsec;
-        }
-        else if(oldest_header.stamp.sec == sec) {
-          if(oldest_header.stamp.nanosec > nsec) {
-            oldest_header.stamp.sec = sec;
-            oldest_header.stamp.nanosec = nsec;
-          }
-        }
-      }
-      if (cam3_merged_ && use_cam3_) {
-        *pointCloudMerged += *transformedPointPtr3;
-        int sec = 1e-6*transformedPointPtr1->header.stamp;
-        uint nsec = 1000*transformedPointPtr1->header.stamp - 1e9*sec;
-        if(oldest_header.stamp.sec > sec) {
-          oldest_header.stamp.sec = sec;
-          oldest_header.stamp.nanosec = nsec;
-        }
-        else if(oldest_header.stamp.sec == sec) {
-          if(oldest_header.stamp.nanosec > nsec) {
-            oldest_header.stamp.sec = sec;
-            oldest_header.stamp.nanosec = nsec;
-          }
-        }
-      }
+      if (cam0_merged_ && use_cam0_) *pointCloudMerged += *transformedPointPtr0;
+      if (cam1_merged_ && use_cam1_) *pointCloudMerged += *transformedPointPtr1;
+      if (cam2_merged_ && use_cam2_) *pointCloudMerged += *transformedPointPtr2;
+      if (cam3_merged_ && use_cam3_) *pointCloudMerged += *transformedPointPtr3;
 
       scoped_lock0.unlock();
       scoped_lock1.unlock();
@@ -267,18 +202,14 @@ private:
       scoped_lock3.unlock();
 
       pcl::copyPointCloud(*pointCloudMerged, point_cloud);
+      // pointCloudMergedmsg = *pointCloudMerged;
       auto msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
       pcl::toROSMsg(point_cloud, *msg);
-
-      // msg->header.frame_id = "body";
       // msg->header.stamp = this->now();
-      msg->header = oldest_header;
-
+      msg->header.stamp = temp_stamp;
+      msg->header.frame_id = "body";
       publisher_->publish(*msg);
-
       last_published_time_ = this->now();
-      // RCLCPP_INFO(this->get_logger(), "msg: %d.%d sec", msg->header.stamp.sec, msg->header.stamp.nanosec); // microseconds -> nanoseconds
-      // RCLCPP_INFO(this->get_logger(), "now: %f sec", last_published_time_.seconds());
 
       auto steady_clock = rclcpp::Clock();
       RCLCPP_INFO_THROTTLE(this->get_logger(), steady_clock, 5000, "Merged point cloud has (%i points).", static_cast<int>(pointCloudMerged->size()));
@@ -308,7 +239,8 @@ private:
 
     // reduce points using VoxelGrid filter
     if(apply_voxel_grid_filter_) {
-        pcl::VoxelGrid<pcl::PointXYZ> sor;
+        // pcl::VoxelGrid<pcl::PointXYZ> sor;
+        pcl::VoxelGrid<pcl::PointXYZRGBNormal> sor;
         sor.setInputCloud (point_cloud);
         double filter_size = voxel_grid_filter_size_; //sensorParameters_.at("voxelgrid_filter_size");
         sor.setLeafSize (filter_size, filter_size, filter_size);
@@ -324,6 +256,8 @@ private:
   {
     rclcpp::Clock clock;
     RCLCPP_DEBUG_THROTTLE(this->get_logger(), clock, 5, "Cam0 callback start.");
+
+    temp_stamp = raw_point_cloud->header.stamp;
 
     geometry_msgs::msg::TransformStamped transform_stamped;
     this->broadcast_static_tf_body2cam0();
@@ -483,14 +417,22 @@ private:
     if (false) {
       Eigen::Matrix4f transform_mat;
 
-      transform_mat << -0.0801843, -0.62506734, 0.77644143, 0.05548641,
-                      -0.99670208, 0.04053544, -0.07029825, -0.02227328,
-                        0.01246774, -0.7795176, -0.62625622, -0.03080424,
-                        0,          0,          0,       1;
+
+      // // original
+      // transform_mat << -0.0801843, -0.62506734, 0.77644143, 0.05548641,
+      //                 -0.99670208, 0.04053544, -0.07029825, -0.02227328,
+      //                   0.01246774, -0.7795176, -0.62625622, -0.03080424,
+      //                   0,          0,          0,       1;
       // Tm <<   -0.0801843, -0.99670208, 0.01246774, -0.01736663,
       //         -0.62506734, 0.04053544, -0.7795176, 0.01157315,
       //         0.77644143, -0.07029825, -0.62625622, -0.06393907,
       //         0,          0,          0,          1;
+
+      // //from hubozig
+      transform_mat << 0.01015289, -0.54253942,  0.83996899,  0.08736657,
+                      -0.99993885, -0.00182629,  0.01090688,  0.01450873,
+                      -0.00438338, -0.84002836, -0.54252478, -0.03862298,
+                       0., 0., 0., 1.;
 
       tf2::Vector3 origin;
       origin.setValue(static_cast<double>(transform_mat(0,3)),static_cast<double>(transform_mat(1,3)),static_cast<double>(transform_mat(2,3)));
@@ -536,7 +478,7 @@ private:
 
     tf2::Quaternion quat;
     // double roll = 0;
-    double pitch = 32;
+    double pitch = 32; //35;
     double yaw = 0;
     quat.setRPY(0, pitch*pi/180, yaw*pi/180);
     static_transform_stamped.transform.rotation.x = quat.x();
@@ -927,6 +869,8 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_publisher_;
+
+  builtin_interfaces::msg::Time temp_stamp;
 };
 
 int main(int argc, char * argv[])
