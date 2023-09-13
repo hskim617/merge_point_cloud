@@ -464,7 +464,7 @@ private:
 
     tf2::Quaternion quat;
     // double roll = 0;
-    double pitch = 35;
+    double pitch = 0; // 35;
     double yaw = 0;
     quat.setRPY(0, pitch*pi/180, yaw*pi/180);
     static_transform_stamped.transform.rotation.x = quat.x();
